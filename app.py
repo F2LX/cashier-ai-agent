@@ -15,6 +15,34 @@ db_config = {
     'database': 'cashier-ai'
 }
 
+@app.route('/is-face-valid', methods=['POST'])
+def face_validation():
+    try:
+        data = request.get_json()
+
+        # Ambil gambar dari request dan hapus metadata jika ada
+        image_data = data['image']
+        if ',' in image_data:
+            # Pisahkan metadata dari data gambar
+            image_data = image_data.split(',')[1]
+        
+        # Decode gambar dari Base64
+        decoded_image = base64.b64decode(image_data)
+
+        # Load gambar menggunakan face_recognition
+        image = face_recognition.load_image_file(BytesIO(decoded_image))
+        face_encodings = face_recognition.face_encodings(image)
+
+        # Return true jika wajah terdeteksi, false jika tidak
+        if face_encodings:
+            return jsonify({'valid': True})
+        else:
+            return jsonify({'valid': False})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
 @app.route('/verify-faces', methods=['POST'])
 def verify_face():
     try:
