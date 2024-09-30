@@ -20,20 +20,18 @@ def face_validation():
     try:
         data = request.get_json()
 
-        # Ambil gambar dari request dan hapus metadata jika ada
+        # Decode base64 image
         image_data = data['image']
         if ',' in image_data:
-            # Pisahkan metadata dari data gambar
-            image_data = image_data.split(',')[1]
+            image_data = image_data.split(',')[1]  # Remove metadata
         
-        # Decode gambar dari Base64
         decoded_image = base64.b64decode(image_data)
 
-        # Load gambar menggunakan face_recognition
+        # Load image using face_recognition (will use GPU with dlib[cuda])
         image = face_recognition.load_image_file(BytesIO(decoded_image))
         face_encodings = face_recognition.face_encodings(image)
 
-        # Return true jika wajah terdeteksi, false jika tidak
+        # Return true if a face is detected, false if not
         if face_encodings:
             return jsonify({'valid': True})
         else:
@@ -41,23 +39,20 @@ def face_validation():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
 
 @app.route('/verify-faces', methods=['POST'])
 def verify_face():
     try:
         data = request.get_json()
 
-        # Ambil gambar dari request dan hapus metadata jika ada
+        # Decode base64 image
         image_data1 = data['image1']
         if ',' in image_data1:
-            # Pisahkan metadata dari data gambar
-            image_data1 = image_data1.split(',')[1]
+            image_data1 = image_data1.split(',')[1]  # Remove metadata
         
-        # Decode gambar dari Base64
         decoded_image1 = base64.b64decode(image_data1)
 
-        # Load gambar menggunakan face_recognition
+        # Load image using face_recognition (will use GPU with dlib[cuda])
         image1 = face_recognition.load_image_file(BytesIO(decoded_image1))
         face_encodings1 = face_recognition.face_encodings(image1)
 
@@ -66,30 +61,30 @@ def verify_face():
 
         face_encoding1 = face_encodings1[0]
 
-        # Koneksi ke database
+        # Connect to the database
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
 
-        # Query untuk mendapatkan semua wajah dari database
+        # Query all face images from database
         query = "SELECT img, User_id FROM Face_Data"
         cursor.execute(query)
 
         match_found = False
         user_id = None
 
-        # Iterasi untuk mencari kecocokan wajah
+        # Loop through faces from the database
         for (face_data, db_user_id) in cursor.fetchall():
             if ',' in face_data:
-                # Pisahkan metadata dari data gambar
-                face_data = face_data.split(',')[1]
+                face_data = face_data.split(',')[1]  # Remove metadata
             
             decoded_db_image = base64.b64decode(face_data)
 
-            # Load gambar dari database
+            # Load image from database using face_recognition
             db_face_image = face_recognition.load_image_file(BytesIO(decoded_db_image))
             db_face_encoding = face_recognition.face_encodings(db_face_image)
 
             if db_face_encoding:
+                # Compare faces using GPU-accelerated dlib
                 match = face_recognition.compare_faces([face_encoding1], db_face_encoding[0], tolerance=0.4)
                 if match[0]:
                     match_found = True
